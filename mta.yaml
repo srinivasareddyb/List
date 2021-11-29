@@ -1,0 +1,94 @@
+_schema-version: "3.2"
+ID: felist
+description: A Fiori application.
+version: 0.0.1
+modules:
+- name: felist-dest-content
+  type: com.sap.application.content
+  requires:
+  - name: felist-dest-srv
+    parameters:
+      content-target: true
+  - name: felist-repo-host
+    parameters:
+      service-key:
+        name: felist-repo-host-key
+  - name: felist-uaa
+    parameters:
+      service-key:
+        name: felist-uaa-key
+  parameters:
+    content:
+      instance:
+        destinations:
+        - Name: felist_repo_host
+          ServiceInstanceName: felist-html5-srv
+          ServiceKeyName: felist-repo-host-key
+          sap.cloud.service: felist
+        - Authentication: OAuth2UserTokenExchange
+          Name: felist_uaa
+          ServiceInstanceName: felist-xsuaa-srv
+          ServiceKeyName: felist-uaa-key
+          sap.cloud.service: felist
+        existing_destinations_policy: ignore
+  build-parameters:
+    no-source: true
+- name: felist-app-content
+  type: com.sap.application.content
+  path: .
+  requires:
+  - name: felist-repo-host
+    parameters:
+      content-target: true
+  build-parameters:
+    build-result: resources
+    requires:
+    - artifacts:
+      - felist.zip
+      name: felist
+      target-path: resources/
+- name: felist
+  type: html5
+  path: .
+  build-parameters:
+    build-result: dist
+    builder: custom
+    commands:
+    - npm install
+    - npm run build:cf
+    supported-platforms: []
+resources:
+- name: felist-dest-srv
+  type: org.cloudfoundry.managed-service
+  parameters:
+    config:
+      HTML5Runtime_enabled: true
+      init_data:
+        instance:
+          destinations:
+          - Authentication: NoAuthentication
+            Name: ui5
+            ProxyType: Internet
+            Type: HTTP
+            URL: https://ui5.sap.com
+          existing_destinations_policy: update
+      version: 1.0.0
+    service: destination
+    service-name: felist-dest-srv
+    service-plan: lite
+- name: felist-uaa
+  type: org.cloudfoundry.managed-service
+  parameters:
+    path: ./xs-security.json
+    service: xsuaa
+    service-name: felist-xsuaa-srv
+    service-plan: application
+- name: felist-repo-host
+  type: org.cloudfoundry.managed-service
+  parameters:
+    service: html5-apps-repo
+    service-name: felist-html5-srv
+    service-plan: app-host
+parameters:
+  deploy_mode: html5-repo
+  enable-parallel-deployments: true
